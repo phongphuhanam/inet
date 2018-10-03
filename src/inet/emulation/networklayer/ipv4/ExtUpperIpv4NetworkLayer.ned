@@ -16,32 +16,24 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.networklayer.ipv4;
+package inet.emulation.networklayer.ipv4;
 
 import inet.common.MessageDispatcher;
-import inet.networklayer.contract.IArp;
 import inet.networklayer.configurator.ipv4.Ipv4NodeConfigurator;
+import inet.networklayer.contract.IArp;
 import inet.networklayer.contract.INetworkLayer;
+import inet.networklayer.ipv4.IIgmp;
+import inet.networklayer.ipv4.IIpv4;
+import inet.networklayer.ipv4.Icmp;
+import inet.networklayer.ipv4.Ipv4NatTable;
+import inet.networklayer.ipv4.Ipv4RoutingTable;
 
-//
-// Network layer of an IPv4 node.
-//
-//
-module Ipv4NetworkLayer like INetworkLayer
+module ExtUpperIpv4NetworkLayer like INetworkLayer
 {
     parameters:
-        bool proxyARP = default(true);
-        bool forwarding = default(false);
-        bool multicastForwarding = default(false);
         string interfaceTableModule;
-        *.forwarding = forwarding;
-        *.multicastForwarding = multicastForwarding;
         *.interfaceTableModule = default(absPath(interfaceTableModule));
-        *.routingTableModule = default(absPath(".routingTable"));
-        *.arpModule = default(absPath(".arp"));
-        *.icmpModule = default(absPath(".icmp"));
-        arp.respondToProxyARP = proxyARP;
-        ip.useProxyARP = true; // as routes with unspecified next-hop addr are quite common
+	    *.routingTableModule = default(absPath(".routingTable"));
         @display("i=block/fork");
 
     gates:
@@ -59,61 +51,20 @@ module Ipv4NetworkLayer like INetworkLayer
             parameters:
                 @display("p=100,200;is=s");
         }
-        natTable: Ipv4NatTable {
+        ip: <default("ExtUpperIpv4")> like IIpv4 {
             parameters:
-                @display("p=100,300;is=s");
-        }
-        up: MessageDispatcher {
-            parameters:
-                @display("p=550,100;b=600,5");
-        }
-        igmp: <default("Igmpv2")> like IIgmp {
-            parameters:
-                @display("p=400,200");
-        }
-        icmp: Icmp {
-            parameters:
-                @display("p=700,200");
-        }
-        mp: MessageDispatcher {
-            parameters:
-                @display("p=550,300;b=600,5");
-        }
-        ip: <default("Ipv4")> like IIpv4 {
-            parameters:
-                @display("p=700,400;q=queue");
+                @display("p=500,100");
         }
         arp: <default("Arp")> like IArp {
             parameters:
-                @display("p=400,400;q=pendingQueue");
+                @display("p=200,100;q=pendingQueue");
         }
         lp: MessageDispatcher {
             parameters:
-                @display("p=550,500;b=600,5");
+                @display("p=350,200;b=600,5");
         }
 
     connections allowunconnected:
-        transportIn --> { @display("m=n"); } --> up.in++;
-        transportOut <-- { @display("m=n"); } <-- up.out++;
-
-        up.out++ --> igmp.routerIn;
-        up.in++ <-- igmp.routerOut;
-
-        up.out++ --> mp.in++;
-        up.in++ <-- mp.out++;
-
-        up.out++ --> icmp.transportIn;
-        up.in++ <-- icmp.transportOut;
-
-        igmp.ipOut --> mp.in++;
-        igmp.ipIn <-- mp.out++;
-
-        icmp.ipOut --> mp.in++;
-        icmp.ipIn <-- mp.out++;
-
-        mp.out++ --> ip.transportIn;
-        mp.in++ <-- ip.transportOut;
-
         arp.ifOut --> lp.in++;
         arp.ifIn <-- lp.out++;
 
