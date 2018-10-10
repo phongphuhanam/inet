@@ -38,8 +38,6 @@ namespace inet {
 
 Define_Module(EtherEncap);
 
-simsignal_t EtherEncap::encapPkSignal = registerSignal("encapPk");
-simsignal_t EtherEncap::decapPkSignal = registerSignal("decapPk");
 simsignal_t EtherEncap::pauseSentSignal = registerSignal("pauseSent");
 
 void EtherEncap::initialize(int stage)
@@ -87,7 +85,6 @@ void EtherEncap::processPacketFromHigherLayer(Packet *packet)
         throw cRuntimeError("packet from higher layer (%d bytes) exceeds maximum Ethernet payload length (%d)", (int)packet->getByteLength(), MAX_ETHERNET_DATA_BYTES);
 
     totalFromHigherLayer++;
-    emit(encapPkSignal, packet);
 
     // Creates MAC header information and encapsulates received higher layer data
     // with this information and transmits resultant frame to lower layer
@@ -122,6 +119,7 @@ void EtherEncap::processPacketFromHigherLayer(Packet *packet)
 
     packet->addTagIfAbsent<PacketProtocolTag>()->setProtocol(&Protocol::ethernetMac);
     EV_INFO << "Sending " << packet << " to lower layer.\n";
+    emit(packetSentToLowerSignal, packet);
     send(packet, "lowerLayerOut");
 }
 
@@ -201,10 +199,10 @@ void EtherEncap::processPacketFromMac(Packet *packet)
                       << packet->getName() << "' to higher layer\n";
 
             totalFromMAC++;
-            emit(decapPkSignal, packet);
 
             // pass up to higher layers.
             EV_INFO << "Sending " << packet << " to upper layer.\n";
+            emit(packetSentToUpperSignal, packet);
             send(packet, "upperLayerOut");
         }
         else {
@@ -248,9 +246,8 @@ void EtherEncap::handleSendPause(cMessage *msg)
     packet->addTagIfAbsent<PacketProtocolTag>()->setProtocol(&Protocol::ethernetMac);
 
     EV_INFO << "Sending " << frame << " to lower layer.\n";
-    send(packet, "lowerLayerOut");
-
     emit(pauseSentSignal, pauseUnits);
+    send(packet, "lowerLayerOut");
     totalPauseSent++;
 }
 
