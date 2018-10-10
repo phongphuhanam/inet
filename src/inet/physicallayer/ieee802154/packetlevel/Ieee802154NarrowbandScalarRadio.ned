@@ -20,6 +20,9 @@ package inet.physicallayer.ieee802154.packetlevel;
 
 import inet.physicallayer.base.packetlevel.FlatRadioBase;
 
+//
+// TODO
+//
 module Ieee802154NarrowbandScalarRadio extends Ieee802154NarrowbandRadio
 {
     parameters:
